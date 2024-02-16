@@ -1,1 +1,3 @@
-aws-deployement/build-server/node_modules
+aws-deployment/build-server/node_modules
+node_modules
+/node_modules
