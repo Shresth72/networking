@@ -38,7 +38,8 @@ async function init() {
       recursive: true,
     });
 
-    for (const filePath of distFolderContents) {
+    for (const file of distFolderContents) {
+      const filePath = path.join(distFolderPath, file);
       if (fs.lstatSync(filePath).isDirectory()) continue;
 
       const command = new PutObjectCommand({
@@ -54,3 +55,28 @@ async function init() {
     console.log("Deployment completed");
   });
 }
+
+/*
+  Push the container on AWS Elastic Container Registry
+
+  -> Retrieve an authentication token and authenticate your Docker client to your registry.
+     Use the AWS CLI:
+      aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com
+
+  -> Build your Docker image using the following command. For information on building a Docker file from scratch see the instructions here: https://docs.docker.com/engine/reference/builder/
+      docker build -t <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com/<project_name> .
+
+  -> After the build completes, tag your image so you can push the image to this repository:
+      docker tag <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com/<project_name>:latest
+
+  -> Run the following command to push this image to your newly created AWS repository:
+      docker push <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com/<project_name>:latest
+*/
+
+/*
+  Create a cluster on AWS ECS to deploy the container
+
+  -> Copy the URI of the container from the AWS ECR
+  -> Create a new task definition to run the image in the container
+
+*/
