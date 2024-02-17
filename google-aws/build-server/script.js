@@ -44,7 +44,7 @@ async function init() {
 
       const command = new PutObjectCommand({
         Bucket: "my-bucket",
-        Key: `__outputs/${PROJECT_ID}/${filePath}`,
+        Key: `__outputs/${PROJECT_ID}/${file}`,
         Body: fs.createReadStream(filePath),
         ContentType: mime.lookup(filePath),
       });
@@ -80,3 +80,7 @@ async function init() {
   -> Create a new task definition to run the image in the container
 
 */
+
+// To Test locally run the following command
+// sudo docker build -t <docker_image_name> .
+// sudo docker run -it -e GIT_REPOSITORY_URL=<git_repo_url> -e PROJECT_ID=<project_id> <docker_image_name>
