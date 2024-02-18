@@ -3,7 +3,9 @@ const path = require("path");
 const fs = require("fs");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const mime = require("mime-types");
+// const { Storage } = require("@google-cloud/storage");
 
+// AWS S3
 const s3Client = new S3Client({
   region: "ap-south-1",
   credentials: {
@@ -11,6 +13,9 @@ const s3Client = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
+
+// Google Cloud Storage
+// const storage = new Storage({});
 
 const PROJECT_ID = process.env.PROJECT_ID;
 
