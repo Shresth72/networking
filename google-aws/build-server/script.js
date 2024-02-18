@@ -3,7 +3,16 @@ const path = require("path");
 const fs = require("fs");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const mime = require("mime-types");
-// const { Storage } = require("@google-cloud/storage");
+const Redis = require("ioredis");
+
+const PROJECT_ID = process.env.PROJECT_ID;
+
+// Redis
+const publisher = new Redis(process.env.REDIS_URL);
+
+function publishLog(log) {
+  publisher.publish(`logs:${PROJECT_ID}`, JSON.stringify({ log }));
+}
 
 // AWS S3
 const s3Client = new S3Client({
@@ -14,13 +23,9 @@ const s3Client = new S3Client({
   },
 });
 
-// Google Cloud Storage
-// const storage = new Storage({});
-
-const PROJECT_ID = process.env.PROJECT_ID;
-
 async function init() {
   console.log("Executing script.js");
+  publishLog("Build Started...");
 
   const outDirPath = path.join(__dirname, "output");
 
@@ -30,22 +35,29 @@ async function init() {
   // capture logs
   p.stdout.on("data", (data) => {
     console.log(data.toString());
+    publishLog(data.toString());
   });
 
   p.stdout.on("error", (error) => {
-    console.log(`Error: ${error.toString()}`);
+    console.log(`error: ${error.toString()}`);
+    publishLog(`error: ${error.toString()}`);
   });
 
   p.on("close", async () => {
     console.log("Script execution completed");
+    publishLog("Build Completed...");
+
     const distFolderPath = path.join(outDirPath, "dist");
     const distFolderContents = fs.readdirSync(distFolderPath, {
       recursive: true,
     });
 
+    publishLog("Uploading to S3...");
     for (const file of distFolderContents) {
       const filePath = path.join(distFolderPath, file);
       if (fs.lstatSync(filePath).isDirectory()) continue;
+
+      publishLog(`Uploading ${file}...`);
 
       const command = new PutObjectCommand({
         Bucket: "my-bucket",
@@ -55,9 +67,11 @@ async function init() {
       });
 
       await s3Client.send(command);
+      publishLog(`Uploaded ${file}`);
     }
 
-    console.log("Deployment completed");
+    publishLog("Uploading Completed");
+    console.log("Uploading completed");
   });
 }
 

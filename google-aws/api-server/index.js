@@ -1,9 +1,24 @@
 const express = require("express");
 const { generateSlug } = require("random-word-slugs");
 const { ECSClient, RunTaskCommand } = require("@aws-sdk/client-ecs");
+const { Server } = require("socket.io");
+const Redis = require("ioredis");
 
 const app = express();
 const PORT = 9000;
+
+const subscriber = new Redis(process.env.REDIS_URL);
+
+const io = new Server({ cors: "*" });
+
+io.on("connection", (socket) => {
+  socket.on("subscribe", (channel) => {
+    socket.join(channel);
+    socket.emit("message", `Joined ${channel} channel`);
+  });
+});
+
+io.listen(9001, () => console.log("Socket Server Running.. 9001"));
 
 const ecsClient = new ECSClient({
   region: "ap-south-1",
@@ -21,8 +36,8 @@ const config = {
 app.use(express.json());
 
 app.post("/project", async (req, res) => {
-  const { gitURL } = req.body;
-  const projectSlug = generateSlug();
+  const { gitURL, slug } = req.body;
+  const projectSlug = slug ? slug : generateSlug();
 
   // Spin the container on ecs client
   // Copy the ARN of the cluster
@@ -58,6 +73,16 @@ app.post("/project", async (req, res) => {
     data: { projectSlug, url: `http://${projectSlug}.localhost:8000` },
   });
 });
+
+async function initRedisSubscribe() {
+  console.log("Subscribing to logs:");
+  subscriber.psubscribe("logs:*");
+  subscriber.on("pmessage", (pattern, channel, message) => {
+    io.to(channel).emit("message", message);
+  });
+}
+
+initRedisSubscribe();
 
 app.listen(PORT, () => console.log(`API Server Running.. ${PORT}`));
 
