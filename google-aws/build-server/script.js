@@ -59,7 +59,9 @@ async function init() {
 
   const outDirPath = path.join(__dirname, "output");
 
-  const p = exec(`cd ${outDirPath} && npm install && npm run build`);
+  // validate package.json to check if it's a valid node project
+
+  const p = exec(`cd ${outDirPath} && npm install && ${"npm run build"}`);
   // build creates a dist folder with the build files to be deployed on S3 bucket
 
   // capture logs
@@ -106,3 +108,5 @@ async function init() {
     process.exit(0);
   });
 }
+
+init();

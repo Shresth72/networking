@@ -7,6 +7,9 @@ const { z } = require("zod");
 const { PrismaClient } = require("@prisma/client");
 const { createClient } = require("@clickhouse/client");
 const { Kafka } = require("kafkajs");
+const { v4: uuidv4 } = require("uuid");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 const PORT = 9000;
@@ -62,6 +65,19 @@ const config = {
 
 app.use(express.json());
 app.use(cors());
+
+app.get("/logs/:id", async (req, res) => {
+  const { id } = req.params;
+  const logs = await clickhouseClient.query({
+    query: `SELECT * FROM log_events WHERE deployment_id = {deployment_id:String}`,
+    params: { deployment_id: id },
+    format: "JSONEachRow",
+  });
+
+  const rawLogs = await logs.json();
+
+  return res.json({ status: "success", data: rawLogs });
+});
 
 app.post("/project", async (req, res) => {
   const schema = z.object({
@@ -140,7 +156,7 @@ app.post("/deploy", async (req, res) => {
 
   return res.json({
     status: "queued",
-    data: { projectSlug, url: `http://${projectSlug}.localhost:8000` },
+    data: { deploymentId: deployment.id },
   });
 });
 
@@ -159,6 +175,7 @@ async function initKafkaConsumer() {
   await consumer.subscribe({ topics: ["container-logs"] });
 
   await consumer.run({
+    autoCommit: false,
     eachBatch: async ({
       batch,
       heartbeat,
@@ -171,12 +188,32 @@ async function initKafkaConsumer() {
       for (const message of messages) {
         const stringMessage = message.value.toString();
         const { PROJECT_ID, DEPLOYMENT_ID, log } = JSON.parse(stringMessage);
-        await clickhouseClient.insert({
-          tables: [{}]
-        })
+        console.log(`Received log: ${log} on deployment: ${DEPLOYMENT_ID}`);
+
+        try {
+          const { query_id } = await clickhouseClient.insert({
+            tables: "log_events",
+            values: [
+              {
+                event_id: uuidv4(),
+                deployment_id: DEPLOYMENT_ID,
+                log,
+              },
+            ],
+            format: "JSONEachRow",
+          });
+          console.log(`Inserted into clickhouse: ${query_id}`);
+          resolveOffset(message.offset);
+          await commitOffsetsIfNecessary(message.offset);
+          await heartbeat();
+        } catch (error) {
+          console.error(`Error: ${error}`);
+        }
       }
     },
   });
 }
+
+initKafkaConsumer();
 
 app.listen(PORT, () => console.log(`API Server Running.. ${PORT}`));

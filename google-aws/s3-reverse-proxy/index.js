@@ -12,7 +12,14 @@ app.use((req, res) => {
   const hostname = req.hostname;
   const subdomain = hostname.split(".")[0];
 
-  const resolvesTo = `${BASE_PATH}/${subdomain}`;
+  // Find the subdomain from DB and resolve it to the S3 bucket
+  const id = prisma.deployment.findUnique({
+    where: { subdomain },
+  });
+
+  // Add the subdomain to kafka topic to gain analytics
+
+  const resolvesTo = `${BASE_PATH}/${id}`;
 
   proxy.web(req, res, { target: resolvesTo, changeOrigin: true });
 });
