@@ -6,6 +6,7 @@ const cors = require("cors");
 const { z } = require("zod");
 const { PrismaClient } = require("@prisma/client");
 const { createClient } = require("@clickhouse/client");
+const { Kafka } = require("kafkajs");
 
 const app = express();
 const PORT = 9000;
@@ -14,7 +15,23 @@ const prisma = new PrismaClient({});
 
 const io = new Server({ cors: "*" });
 
-const client = new createClient({
+// Kafka
+const kafka = new Kafka({
+  clientId: `api-server-${PORT}`,
+  brokers: [process.env.KAFKA_BROKER_URL],
+  ssl: {
+    ca: [fs.readFileSync(path.join(__dirname, "kafka.pem"), "utf-8")],
+  },
+  sasl: {
+    username: process.env.KAFKA_USERNAME,
+    password: process.env.KAFKA_PASSWORD,
+    mechanism: "plain",
+  },
+});
+const consumer = kafka.consumer({ groupId: "api-server-logs-consumer" });
+
+// Clickhouse
+const clickhouseClient = new createClient({
   host: process.env.CLICKHOUSE_HOST,
   database: "default",
   username: process.env.CLICKHOUSE_USER,
@@ -127,14 +144,39 @@ app.post("/deploy", async (req, res) => {
   });
 });
 
-async function initRedisSubscribe() {
-  console.log("Subscribing to logs:");
-  subscriber.psubscribe("logs:*");
-  subscriber.on("pmessage", (pattern, channel, message) => {
-    io.to(channel).emit("message", message);
+// async function initRedisSubscribe() {
+//   console.log("Subscribing to logs:");
+//   subscriber.psubscribe("logs:*");
+//   subscriber.on("pmessage", (pattern, channel, message) => {
+//     io.to(channel).emit("message", message);
+//   });
+// }
+
+// initRedisSubscribe();
+
+async function initKafkaConsumer() {
+  await consumer.connect();
+  await consumer.subscribe({ topics: ["container-logs"] });
+
+  await consumer.run({
+    eachBatch: async ({
+      batch,
+      heartbeat,
+      resolveOffset,
+      commitOffsetsIfNecessary,
+    }) => {
+      const messages = batch.messages;
+      console.log(`Recv. ${messages.length} messages`);
+
+      for (const message of messages) {
+        const stringMessage = message.value.toString();
+        const { PROJECT_ID, DEPLOYMENT_ID, log } = JSON.parse(stringMessage);
+        await clickhouseClient.insert({
+          tables: [{}]
+        })
+      }
+    },
   });
 }
-
-initRedisSubscribe();
 
 app.listen(PORT, () => console.log(`API Server Running.. ${PORT}`));
