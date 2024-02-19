@@ -2,7 +2,7 @@
 
 ## A Naïve Approach
 
-<img src="./images/naive-approach.png" style="width: 600px;" />
+<img src="./images/naive-approach.png" style="width: 800px;" />
 
 - However, this uses a 2GB bandwidth for each operation/edit
 - It's also not fault tolerant
@@ -17,7 +17,7 @@ To solve the above issue we use chunking updates
   - Reduced bandwidth usage
   - Better fault tolerance
 
-<img src="./images/chunking-updates.png" style="width: 600px;" />
+<img src="./images/chunking-updates.png" style="width: 800px;" />
 
 ## Calculations
 
@@ -44,3 +44,4 @@ For other clients -> 200GB daily update download bandwidth
 ## Handling Subscriptions
 
 <img src="./images/subscription.png" style="width: 800px;" />
+
