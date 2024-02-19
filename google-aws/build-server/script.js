@@ -3,15 +3,43 @@ const path = require("path");
 const fs = require("fs");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const mime = require("mime-types");
-const Redis = require("ioredis");
+const { Kafka } = require("kafkajs");
 
 const PROJECT_ID = process.env.PROJECT_ID;
+const DEPLOYMENT_ID = process.env.DEPLOYMENT_ID;
 
-// Redis
-const publisher = new Redis(process.env.REDIS_URL);
+// Kafka
+const kafka = new Kafka({
+  clientId: `docker-build-server-${DEPLOYMENT_ID}`,
+  brokers: [process.env.KAFKA_BROKER_URL],
+  ssl: {
+    ca: [fs.readFileSync(path.join(__dirname, "kafka.pem"), "utf-8")],
+  },
+  sasl: {
+    username: process.env.KAFKA_USERNAME,
+    password: process.env.KAFKA_PASSWORD,
+    mechanism: "plain",
+  },
+});
 
-function publishLog(log) {
-  publisher.publish(`logs:${PROJECT_ID}`, JSON.stringify({ log }));
+const producer = kafka.producer();
+
+async function publishLog(log) {
+  // publisher.publish(`logs:${PROJECT_ID}`, JSON.stringify({ log }));
+
+  await producer.send({
+    topic: `container-logs`,
+    messages: [
+      {
+        key: "log",
+        value: JSON.stringify({
+          PROJECT_ID,
+          DEPLOYMENT_ID,
+          log,
+        }),
+      },
+    ],
+  });
 }
 
 // AWS S3
@@ -24,8 +52,10 @@ const s3Client = new S3Client({
 });
 
 async function init() {
+  await producer.connect();
+
   console.log("Executing script.js");
-  publishLog("Build Started...");
+  await publishLog("Build Started...");
 
   const outDirPath = path.join(__dirname, "output");
 
@@ -33,31 +63,31 @@ async function init() {
   // build creates a dist folder with the build files to be deployed on S3 bucket
 
   // capture logs
-  p.stdout.on("data", (data) => {
+  p.stdout.on("data", async (data) => {
     console.log(data.toString());
-    publishLog(data.toString());
+    await publishLog(data.toString());
   });
 
-  p.stdout.on("error", (error) => {
+  p.stdout.on("error", async (error) => {
     console.log(`error: ${error.toString()}`);
-    publishLog(`error: ${error.toString()}`);
+    await publishLog(`error: ${error.toString()}`);
   });
 
   p.on("close", async () => {
     console.log("Script execution completed");
-    publishLog("Build Completed...");
+    await publishLog("Build Completed...");
 
     const distFolderPath = path.join(outDirPath, "dist");
     const distFolderContents = fs.readdirSync(distFolderPath, {
       recursive: true,
     });
 
-    publishLog("Uploading to S3...");
+    await publishLog("Uploading to S3...");
     for (const file of distFolderContents) {
       const filePath = path.join(distFolderPath, file);
       if (fs.lstatSync(filePath).isDirectory()) continue;
 
-      publishLog(`Uploading ${file}...`);
+      await publishLog(`Uploading ${file}...`);
 
       const command = new PutObjectCommand({
         Bucket: "my-bucket",
@@ -67,39 +97,12 @@ async function init() {
       });
 
       await s3Client.send(command);
-      publishLog(`Uploaded ${file}`);
+      await publishLog(`Uploaded ${file}`);
     }
 
-    publishLog("Uploading Completed");
+    await publishLog("Uploading Completed");
     console.log("Uploading completed");
+
+    process.exit(0);
   });
 }
-
-/*
-  Push the container on AWS Elastic Container Registry
-
-  -> Retrieve an authentication token and authenticate your Docker client to your registry.
-     Use the AWS CLI:
-      aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com
-
-  -> Build your Docker image using the following command. For information on building a Docker file from scratch see the instructions here: https://docs.docker.com/engine/reference/builder/
-      docker build -t <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com/<project_name> .
-
-  -> After the build completes, tag your image so you can push the image to this repository:
-      docker tag <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com/<project_name>:latest
-
-  -> Run the following command to push this image to your newly created AWS repository:
-      docker push <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com/<project_name>:latest
-*/
-
-/*
-  Create a cluster on AWS ECS to deploy the container
-
-  -> Copy the URI of the container from the AWS ECR
-  -> Create a new task definition to run the image in the container
-
-*/
-
-// To Test locally run the following command
-// sudo docker build -t <docker_image_name> .
-// sudo docker run -it -e GIT_REPOSITORY_URL=<git_repo_url> -e PROJECT_ID=<project_id> <docker_image_name>

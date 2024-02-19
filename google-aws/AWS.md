@@ -30,7 +30,7 @@ docker push <aws_account_id>.dkr.ecr.ap-south-1.amazonaws.com/<project_name>:lat
 
 ### Uploading any repository files on EC2
 
-- Create a cluster on AWS ECS to deploy the container
+- Create a cluster on AWS ECS to deploy the ECR container
 - Copy the URI of the container from the AWS ECR
 - Create a new task definition to run the image in the container
 
@@ -47,4 +47,6 @@ sudo docker run -it -e GIT_REPOSITORY_URL=<git_repo_url> -e PROJECT_ID=<project_
 
 ## Setting up S3 Reverse Proxy
 
-- Setup a nginx or httpProxy to handle requests from the ECS URL
+- Setup a nginx or httpProxy to handle requests
+- Execute the index.html file from the S3 bucket endpoint
+- Add project_id slug to redirect the requests to a better URL
