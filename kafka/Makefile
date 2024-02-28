@@ -1,10 +1,9 @@
 consumer:
-	node consumer.js $(group)
+	node src/consumer.js $(group)
 
 producer:
-	node producer.js
+	node src/producer.js
 
 admin:
-	node admin.js
+	node src/admin.js
 
--PHONY: consumer producer admin
