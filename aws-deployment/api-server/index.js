@@ -23,13 +23,13 @@ const kafka = new Kafka({
   clientId: `api-server-${PORT}`,
   brokers: [process.env.KAFKA_BROKER_URL],
   ssl: {
-    ca: [fs.readFileSync(path.join(__dirname, "kafka.pem"), "utf-8")],
+    ca: [fs.readFileSync(path.join(__dirname, "kafka.pem"), "utf-8")]
   },
   sasl: {
     username: process.env.KAFKA_USERNAME,
     password: process.env.KAFKA_PASSWORD,
-    mechanism: "plain",
-  },
+    mechanism: "plain"
+  }
 });
 const consumer = kafka.consumer({ groupId: "api-server-logs-consumer" });
 
@@ -38,7 +38,7 @@ const clickhouseClient = new createClient({
   host: process.env.CLICKHOUSE_HOST,
   database: "default",
   username: process.env.CLICKHOUSE_USER,
-  password: process.env.CLICKHOUSE_PASSWORD,
+  password: process.env.CLICKHOUSE_PASSWORD
 });
 
 io.on("connection", (socket) => {
@@ -54,13 +54,13 @@ const ecsClient = new ECSClient({
   region: "ap-south-1",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
 });
 
 const config = {
   CLUSTER: "cluster-arn",
-  TASK: "task-arn",
+  TASK: "task-arn"
 };
 
 app.use(express.json());
@@ -71,7 +71,7 @@ app.get("/logs/:id", async (req, res) => {
   const logs = await clickhouseClient.query({
     query: `SELECT * FROM log_events WHERE deployment_id = {deployment_id:String}`,
     params: { deployment_id: id },
-    format: "JSONEachRow",
+    format: "JSONEachRow"
   });
 
   const rawLogs = await logs.json();
@@ -82,7 +82,7 @@ app.get("/logs/:id", async (req, res) => {
 app.post("/project", async (req, res) => {
   const schema = z.object({
     name: z.string(),
-    gitURL: z.string(),
+    gitURL: z.string()
   });
   const safeParseResult = schema.safeParse(req.body);
 
@@ -95,8 +95,8 @@ app.post("/project", async (req, res) => {
     data: {
       name,
       gitURL,
-      subdomain: generateSlug(),
-    },
+      subdomain: generateSlug()
+    }
   });
 
   return res.json({ status: "success", data: deployment });
@@ -106,13 +106,13 @@ app.post("/deploy", async (req, res) => {
   const { projectId } = req.body;
 
   const project = await prisma.deployment.findUnique({
-    where: { id: projectId },
+    where: { id: projectId }
   });
   if (!project) return res.status(404).json({ error: "Project not found" });
 
   // Check if there is no running deployment
   const runningDeployment = await prisma.deployment.findFirst({
-    where: { status: { in: ["IN_PROGRESS", "QUEUED"] } },
+    where: { status: { in: ["IN_PROGRESS", "QUEUED"] } }
   });
   if (runningDeployment)
     return res.status(400).json({ error: "Another deployment is in progress" });
@@ -120,8 +120,8 @@ app.post("/deploy", async (req, res) => {
   const deployment = await prisma.deployment.create({
     data: {
       project: { connect: { id: projectId } },
-      status: "QUEUED",
-    },
+      status: "QUEUED"
+    }
   });
 
   // Spin the container on ecs client
@@ -135,8 +135,8 @@ app.post("/deploy", async (req, res) => {
       awsvpcConfiguration: {
         assignPublicIp: "ENABLED",
         subnets: ["subnet-0__", "subnet-1__", "subnet-2__"],
-        securityGroups: ["sg-0__"],
-      },
+        securityGroups: ["sg-0__"]
+      }
     },
     overrides: {
       containerOverrides: [
@@ -145,18 +145,18 @@ app.post("/deploy", async (req, res) => {
           environment: [
             { name: "GIT_REPOSITORY_URL", value: project.gitURL },
             { name: "PROJECT_ID", value: projectId },
-            { name: "DEPLOYMENT_ID", value: deployment.id.toString() },
-          ],
-        },
-      ],
-    },
+            { name: "DEPLOYMENT_ID", value: deployment.id.toString() }
+          ]
+        }
+      ]
+    }
   });
 
   await ecsClient.send(command);
 
   return res.json({
     status: "queued",
-    data: { deploymentId: deployment.id },
+    data: { deploymentId: deployment.id }
   });
 });
 
@@ -180,7 +180,7 @@ async function initKafkaConsumer() {
       batch,
       heartbeat,
       resolveOffset,
-      commitOffsetsIfNecessary,
+      commitOffsetsIfNecessary
     }) => {
       const messages = batch.messages;
       console.log(`Recv. ${messages.length} messages`);
@@ -197,10 +197,10 @@ async function initKafkaConsumer() {
               {
                 event_id: uuidv4(),
                 deployment_id: DEPLOYMENT_ID,
-                log,
-              },
+                log
+              }
             ],
-            format: "JSONEachRow",
+            format: "JSONEachRow"
           });
           console.log(`Inserted into clickhouse: ${query_id}`);
           resolveOffset(message.offset);
@@ -210,7 +210,7 @@ async function initKafkaConsumer() {
           console.error(`Error: ${error}`);
         }
       }
-    },
+    }
   });
 }
 
