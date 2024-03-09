@@ -75,6 +75,96 @@ fn handle_connection(mut stream: TcpStream) {
 
 ## Turning Single-Threaded Server into a Multi-Threaded Server
 
-### Simulating a Slow Request in the Current Server Implementation
+### Improving Throughput with a Thread Pool
 
-- 
+- A thread pool is a group of spawned threads that are waiting and ready to handle a task. When the program receives a new task, it assigns one of the threads in the pool to the task, and that thread will process the task.
+- The remaining threads in the pool are available to handle any other tasks that come in while the first thread is processing.
+- When the first thread is done processing, it's returned to the pool of the idle threads
+- This allows for processing connections concurrently, increasing the throughput of the server.
+- We also have to limit the number of threads in the pool to avoid DoS attacks.
+- The pool will maintain a queue of incoming requests, each of the threads in the pool will pop off a request from this queue, handle the request and ask the queue for another request.
+
+### Spawning a thread for each request
+
+- We can create new threads using `thread::spawn`, so if we open the `/` and `/sleep` requests, simultaneously, the other requests don't have to wait for the `/sleep` to finish.
+
+```rust
+fn main() {
+  let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+
+  for stream in listener.incoming() {
+    let stream = stream.unwrap();
+
+    thread::spawn(|| {
+      handle_connection(stream);
+    });
+  }
+}
+```
+
+### Building ThreadPool using Compiler Driven Development
+
+- We use `ThreadPool::new` to create a new thread pool with a configurable finite number of threads. Then, we can `pool.execute` has a similar interface as `thread::spawn` to run each stream.
+- We can create a `ThreadPool` struct and implement the `new` and `execute` methods.
+- The `execute` method should take closures as parameter with three traits: `Fn`, `FnMut` and `FnOnce`, and it needs to be similar to `thread::spawn` implementation.
+
+```rust
+pub fn spawn<F, T>(f: F) -> JoinHandle<T>
+  where
+    F: FnOnce() -> T,
+    F: Send + 'static,
+    T: Send + 'static,
+```
+
+- The `spawn` method uses `FnOnce` as the trait bound on `F`.
+- The `F` has trait bound `Send` to transfer the closure from one thread to another and `'static` because we don't know how long the thread will take to execute.
+
+```rust
+impl ThreadPool {
+  pub fn execute <F>($self, f: F)
+  where
+    F: FnOnce() + Send + 'static,
+    {
+    }
+}
+```
+
+- We still use the `()` after `FnOnce` because this `FnOnce` represents a closure that takes no parameters and returns the unit type `()`.
+- We can also, implement a `Worker` that manages the threads, along with an worker `id`. The `ThreadPool` can now store a vector of these `Worker`
+
+### Sending Requests to Threads via Channels
+
+- Currently, the closures given to `thread::spawn` do nothing. We want the `Worker` structs to fetch the code to run from a queue held in the `ThreadPool` and send that code to its thread to run.
+- So, to implement this we can:
+  - The `ThreadPool` will create a channel and hold on to the sender.
+  - Each `Worker` will hold on to the receiver.
+  - We'll create a new `Job` struct that will hold the closures we want to send down the channel.
+  - The `execute` method will send the job it wants to execute through the sender.
+  - In its thread, the `Worker` will loop over its receiver and execute the closures of any jobs it receives.
+- To share let multiple workers own the receiver, we use the `Arc` type and `Mutex` to ensure that only one worker gets a job from the receiver at a time.
+
+### Implementing the execute method
+
+- We can change the `Job` struct to a type alias for a trait object that holds the type of closure that `execute` receives.
+- After creating `Job` instance using the closure we get in `execute`, we send that job down the sending end of the channel using `send` method.
+- But at the moment, the threads continue executing as long as the pool exists and we can't stop them.
+- Also, the closure still only references the receiving end of the channel. Instead, we need the closure to loop forever, asking the receiver end of the channel for a job.
+
+```rust
+impl Worker {
+  fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+    let thread = thread::spawn(move || loop {
+    let job = receiver.lock().unwrap().recv().unwrap();
+
+    println!("Worker {id} got a job; executing.");
+
+    job();
+  });
+
+    Worker { id, thread }
+  }
+}
+```
+
+- The `lock` is used to acquire the mutex on the `receiver`
+- Then `recv` is used to receive a `Job` from the channel. If there is no job yet, the current thread will wait until a job becomes available. The `Mutex<T>` ensures that only one `Worker` thread at a time is trying to request a job.
