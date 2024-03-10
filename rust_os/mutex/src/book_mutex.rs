@@ -16,7 +16,17 @@ pub fn main() {
         sold: Mutex::new(100),
     };
 
-    *my_book.name.lock().unwrap() = "Rust Programming 101";
+    // *my_book.name.lock().unwrap() = "Rust Programming 101";
+
+    let mut mutex_changer = my_book.author.lock();
+
+    // Drop the mutex_changer
+    std::mem::drop(mutex_changer);
+
+    // The data will unreachable if lock is already acquired
+    if let Ok(mut mutex) = my_book.author.try_lock() {
+        *mutex = "Harry Potter";
+    }
 
     println!("{:?}", my_book);
 }

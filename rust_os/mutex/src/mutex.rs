@@ -4,6 +4,8 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 pub fn main() {
+    // Atomic Reference Counting (Arc) is a thread-safe reference-counting pointer
+    // that is used to share ownership between threads.
     let counter = Arc::new(Mutex::new(0));
     let mut handles = Vec::with_capacity(10);
 
@@ -22,6 +24,7 @@ pub fn main() {
     }
 
     println!("Result: {}", *counter.lock().unwrap());
+    
 }
 
 // Mutex can cause deadlocks if not used properly.
