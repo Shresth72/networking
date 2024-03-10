@@ -1,15 +1,13 @@
+#![allow(unused_imports)]
+
 use multithread_server_rust::ThreadPool;
 use std::{
     fs,
     io::{prelude::*, BufReader},
     net::{TcpListener, TcpStream},
 };
-mod mutex;
-use mutex::main as mutex_main;
 
 fn main() {
-    mutex_main();
-
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
     let pool = ThreadPool::new(4).unwrap_or_else(|err| {
         eprintln!("Error creating pool: {:?}", err.details);

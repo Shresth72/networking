@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -22,11 +24,11 @@ pub fn main() {
     println!("Result: {}", *counter.lock().unwrap());
 }
 
-// Mutex can cause deadlocks if not used properly. 
+// Mutex can cause deadlocks if not used properly.
 // Deadlocks occur when two or more threads wait for each other
-// to release the lock, causing the program to hang indefinitely. 
-// To avoid deadlocks, always acquire locks in the same order. 
+// to release the lock, causing the program to hang indefinitely.
+// To avoid deadlocks, always acquire locks in the same order.
 // For example, if you have two mutexes,
-// always acquire the first mutex before the second mutex. 
-// Also, always release the locks in the reverse order of acquisition. 
+// always acquire the first mutex before the second mutex.
+// Also, always release the locks in the reverse order of acquisition.
 // This way, you can avoid deadlocks.
