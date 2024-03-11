@@ -8,7 +8,7 @@ use std::{
 };
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:3000").unwrap();
     let pool = ThreadPool::new(4).unwrap_or_else(|err| {
         eprintln!("Error creating pool: {:?}", err.details);
         std::process::exit(1);

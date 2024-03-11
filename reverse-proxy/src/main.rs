@@ -1,4 +1,6 @@
-use http_body_util::{Empty, Full};
+#![allow(unused)]
+
+use http_body_util::Full;
 use hyper::{
     body::{Bytes, Incoming as Body},
     client::conn::http1 as Client,
@@ -29,14 +31,13 @@ async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
 }
 
 async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
-    // let client = Client::new();
-    // client.request(req).await
-
+    // Client Request Sender
+    
     let uri = req.uri().to_string().parse::<hyper::Uri>()?;
     let host = uri.host().expect("No host in the URL");
     let port = uri.port_u16().unwrap_or(80);
 
-    let addr = format!("{}:{}", host, port)
+    let addr: String = format!("{}:{}", host, port)
         .parse()
         .expect("Invalid address");
 
@@ -51,9 +52,7 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
         }
     });
 
-    sender.send_request(req).await?;
-
-    Ok()
+    Ok(sender.send_request(req).await?)
 }
 
 #[tokio::main]
