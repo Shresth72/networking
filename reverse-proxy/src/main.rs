@@ -32,14 +32,11 @@ async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
 
 async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     // Client Request Sender
-    
     let uri = req.uri().to_string().parse::<hyper::Uri>()?;
     let host = uri.host().expect("No host in the URL");
     let port = uri.port_u16().unwrap_or(80);
 
-    let addr: String = format!("{}:{}", host, port)
-        .parse()
-        .expect("Invalid address");
+    let addr: String = format!("{}:{}", host, port);
 
     let stream = TcpStream::connect(addr).await?;
 
@@ -57,7 +54,7 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<ErrorType>> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
     let listener = TcpListener::bind(addr).await?;
 
     // Loop to continuously accept incoming connections
