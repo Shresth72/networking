@@ -8,7 +8,7 @@ use std::{
 };
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:3000").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
     let pool = ThreadPool::new(4).unwrap_or_else(|err| {
         eprintln!("Error creating pool: {:?}", err.details);
         std::process::exit(1);
@@ -36,11 +36,12 @@ fn handle_connection(mut stream: TcpStream) {
 
     if let Some(request_line) = request_line {
         let (status_line, filename) = match request_line.as_str() {
-            "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "response.json"),
+            "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "index.html"),
             "GET /sleep HTTP/1.1" => {
                 std::thread::sleep(std::time::Duration::from_secs(5));
                 ("HTTP/1.1 200 OK", "response.json")
             }
+            "GET /api HTTP/1.1" => ("HTTP/1.1 200 OK", "response.json"),
             _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
         };
 

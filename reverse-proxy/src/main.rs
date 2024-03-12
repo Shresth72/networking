@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use http_body_util::Full;
+use http_body_util::{BodyExt, Empty, Full};
 use hyper::{
     body::{Bytes, Incoming as Body},
     client::conn::http1 as Client,
@@ -9,16 +9,18 @@ use hyper::{
     Request, Response,
 };
 use hyper_util::rt::TokioIo;
-use std::{convert::Infallible, net::SocketAddr};
+use std::{
+    convert::Infallible,
+    io::{self, Write},
+    net::SocketAddr,
+};
 use tokio::net::{TcpListener, TcpStream};
 
 type ErrorType = dyn std::error::Error + Send + Sync;
 
-async fn hello(_: Request<Body>) -> Result<Response<Full<Bytes>>, Infallible> {
-    Ok(Response::new(Full::new(Bytes::from("Hello, World!"))))
-}
-
 async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
+    // Middleware (Log Path of the incoming request)
+
     let path = req.uri().path();
 
     if path.starts_with("/api") {
@@ -32,6 +34,7 @@ async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
 
 async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     // Client Request Sender
+
     let uri = req.uri().to_string().parse::<hyper::Uri>()?;
     let host = uri.host().expect("No host in the URL");
     let port = uri.port_u16().unwrap_or(80);
@@ -49,13 +52,50 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
         }
     });
 
-    Ok(sender.send_request(req).await?)
+    let authority = uri
+        .authority()
+        .expect("No authority in the URL")
+        .clone()
+        .to_string();
+
+    let path = uri.path();
+
+    // GET Request
+    let req = Request::builder()
+        .method(req.method())
+        .uri(path)
+        .header(hyper::header::HOST, authority)
+        .body(req.into_body())
+        .expect("Failed to build request"); // ? to return Box Error
+
+    let mut res = sender.send_request(req).await?;
+
+    println!("Response: {:?}", res.status());
+    println!("Headers: {:?}", res.headers());
+
+    // Stream the body, writing each chunk to stdout as we get it
+    // (instead of buffering and printing all at once)
+    while let Some(next) = res.frame().await {
+        let frame = next?;
+        if let Some(chunk) = frame.data_ref() {
+            io::stdout().write_all(&chunk)?;
+        }
+    }
+
+    // TODO: POST Request
+
+    println!("Request sent successfully");
+
+    Ok(res)
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<ErrorType>> {
+    // Proxy Server
+
     let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
     let listener = TcpListener::bind(addr).await?;
+    println!("Listening on: {}", addr);
 
     // Loop to continuously accept incoming connections
     loop {
@@ -72,6 +112,8 @@ async fn main() -> Result<(), Box<ErrorType>> {
                 .await
             {
                 println!("Error serving connection: {:?}", err);
+            } else {
+                println!("Connection served successfully");
             }
         });
     }
