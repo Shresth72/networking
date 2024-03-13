@@ -59,7 +59,6 @@ fn handle_connection(mut stream: TcpStream) {
         stream.write(response.as_bytes()).unwrap();
     } else {
         println!("No request line received");
-        // TODO: Log error
     }
 }
 

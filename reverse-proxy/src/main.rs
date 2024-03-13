@@ -19,7 +19,7 @@ use tokio::net::{TcpListener, TcpStream};
 type ErrorType = dyn std::error::Error + Send + Sync;
 
 async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
-    // Middleware (Log Path of the incoming request)
+    // Basic Middleware (Log Path of the incoming request)
 
     let path = req.uri().path();
 
@@ -73,8 +73,7 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     println!("Response: {:?}", res.status());
     println!("Headers: {:?}", res.headers());
 
-    // Stream the body, writing each chunk to stdout as we get it
-    // (instead of buffering and printing all at once)
+    // Stream each frame of the body to io::stdout, instead of buffer
     while let Some(next) = res.frame().await {
         let frame = next?;
         if let Some(chunk) = frame.data_ref() {
@@ -85,7 +84,6 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     // TODO: POST Request
 
     println!("Request sent successfully");
-
     Ok(res)
 }
 
