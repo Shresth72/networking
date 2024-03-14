@@ -1,8 +1,7 @@
-#![allow(unused)]
+#![allow(unused_imports)]
 
-use http_body_util::{BodyExt, Empty, Full};
 use hyper::{
-    body::{Bytes, Incoming as Body},
+    body::Incoming as Body,
     client::conn::http1 as Client,
     server::conn::http1 as Server,
     service::service_fn,
@@ -10,7 +9,6 @@ use hyper::{
 };
 use hyper_util::rt::TokioIo;
 use std::{
-    convert::Infallible,
     io::{self, Write},
     net::SocketAddr,
 };
@@ -70,10 +68,13 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
         .uri(path)
         .header(hyper::header::HOST, authority)
         .body(req.into_body())
-        .expect("Failed to build request"); // ? to return Box Error
+        .expect("Failed to build request");
 
-    let mut res = sender.send_request(req).await?;
-    if (res.headers().get("authorization").is_none()) {
+    let res = sender.send_request(req).await?;
+
+    // TODO: Distinguished Name (DN) for the client certificate
+    // ?: Bearer Token setup for now
+    if res.headers().get("authorization").is_none() {
         return Err("No Authorization Token".into());
     }
     if let Some(auth) = res.headers().get("authorization") {
@@ -81,17 +82,13 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
             println!("Authorized");
         } else {
             println!("Unauthorized");
+            // return Err("Unauthorized".into());
         }
     }
 
     println!("Response: {:?}", res.status());
-    // println!("Headers: {:?}", res.headers());
     println!("Method: {:?}", method);
     println!("Host: {:?}", host);
-
-    // TODO: POST Request
-
-    println!("Request sent successfully");
 
     // Send the response back to the client
     Ok(res)
@@ -126,3 +123,8 @@ async fn main() -> Result<(), Box<ErrorType>> {
         });
     }
 }
+
+// TODO 1: TLS connection to service servers
+// TODO 2: DN for client certificate
+// TODO 3: Load Balancer
+// TODO 4: Caching
