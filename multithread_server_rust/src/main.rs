@@ -49,10 +49,11 @@ fn handle_connection(mut stream: TcpStream) {
         let length = contents.len();
 
         let response = format!(
-            "{}\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n{}",
+            "{}\r\nContent-Type: {}\r\nContent-Length: {}\r\nAuthorization: {}\r\n\r\n{}",
             status_line,
             handle_file_type(filename),
             length,
+            "Bearer admin", // Test for proxy protected routes
             contents
         );
 

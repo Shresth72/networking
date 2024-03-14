@@ -18,6 +18,9 @@ use tokio::net::{TcpListener, TcpStream};
 
 type ErrorType = dyn std::error::Error + Send + Sync;
 
+// Test
+const PASSWORDS: [&str; 4] = ["password", "123456", "admin", "root"];
+
 async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     // Basic Middleware (Log Path of the incoming request)
 
@@ -70,9 +73,19 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
         .expect("Failed to build request"); // ? to return Box Error
 
     let mut res = sender.send_request(req).await?;
+    if (res.headers().get("authorization").is_none()) {
+        return Err("No Authorization Token".into());
+    }
+    if let Some(auth) = res.headers().get("authorization") {
+        if PASSWORDS.contains(&auth.to_str().unwrap().split_whitespace().last().unwrap()) {
+            println!("Authorized");
+        } else {
+            println!("Unauthorized");
+        }
+    }
 
     println!("Response: {:?}", res.status());
-    println!("Headers: {:?}", res.headers());
+    // println!("Headers: {:?}", res.headers());
     println!("Method: {:?}", method);
     println!("Host: {:?}", host);
 
