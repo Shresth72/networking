@@ -50,10 +50,11 @@ pub async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>
 
     let res = sender.send_request(req).await?;
 
-    // TODO: Distinguished Name (DN) for the client certificate
+    // TODO: clientDN and clientPW binding
     // ?: Bearer Token setup for now
     if res.headers().get("authorization").is_none() {
-        return Err("No Authorization Token".into());
+        println!("No Authorization Token");
+        // return Err("No Authorization Token".into());
     }
     if let Some(auth) = res.headers().get("authorization") {
         if PASSWORDS.contains(&auth.to_str().unwrap().split_whitespace().last().unwrap()) {

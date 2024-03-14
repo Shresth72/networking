@@ -4,11 +4,8 @@ mod handler;
 use handler::handle;
 
 use hyper::{
-    body::Incoming as Body,
-    client::conn::http1 as Client,
-    server::conn::http1 as Server,
-    service::service_fn,
-    Request, Response,
+    body::Incoming as Body, client::conn::http1 as Client, server::conn::http1 as Server,
+    service::service_fn, Request, Response,
 };
 use hyper_util::rt::TokioIo;
 use std::{
@@ -20,7 +17,7 @@ use tokio::net::{TcpListener, TcpStream};
 pub type ErrorType = dyn std::error::Error + Send + Sync;
 
 // Test
-const PASSWORDS: [&str; 4] = ["password", "123456", "admin", "root"];
+const PASSWORDS: [&str; 2] = ["admin", "root"];
 
 async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     // Basic Middleware (Log Path of the incoming request)
@@ -67,6 +64,7 @@ async fn main() -> Result<(), Box<ErrorType>> {
 }
 
 // TODO 1: TLS connection to service servers
-// TODO 2: DN for client certificate
-// TODO 3: Load Balancer
-// TODO 4: Caching
+// TODO 2: TLS connection to multiple service servers
+// TODO 3: clientDN and clientPW binding
+// TODO 4: Load Balancer
+// TODO 5: Caching
