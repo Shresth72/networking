@@ -2,3 +2,5 @@
 members = [
     "mutex"
 ]
+
+[dependencies]

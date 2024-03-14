@@ -38,6 +38,7 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     let uri = req.uri().to_string().parse::<hyper::Uri>()?;
     let host = uri.host().expect("No host in the URL");
     let port = uri.port_u16().unwrap_or(80);
+    let method = req.method().clone();
 
     let addr: String = format!("{}:{}", host, port);
 
@@ -72,18 +73,14 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
 
     println!("Response: {:?}", res.status());
     println!("Headers: {:?}", res.headers());
-
-    // Stream each frame of the body to io::stdout, instead of buffer
-    while let Some(next) = res.frame().await {
-        let frame = next?;
-        if let Some(chunk) = frame.data_ref() {
-            io::stdout().write_all(&chunk)?;
-        }
-    }
+    println!("Method: {:?}", method);
+    println!("Host: {:?}", host);
 
     // TODO: POST Request
 
     println!("Request sent successfully");
+
+    // Send the response back to the client
     Ok(res)
 }
 
@@ -93,7 +90,7 @@ async fn main() -> Result<(), Box<ErrorType>> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
     let listener = TcpListener::bind(addr).await?;
-    println!("Listening on: {}", addr);
+    println!("Listening on: {} on v2", addr);
 
     // Loop to continuously accept incoming connections
     loop {
