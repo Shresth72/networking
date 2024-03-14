@@ -64,7 +64,7 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
 
     let path = uri.path();
 
-    // GET Request
+    // Processing the request
     let req = Request::builder()
         .method(req.method())
         .uri(path)
