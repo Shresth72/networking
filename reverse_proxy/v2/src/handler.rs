@@ -14,6 +14,8 @@ use tokio::net::{TcpListener, TcpStream};
 pub async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     // Client Request Sender
 
+    // TODO: PSbindDN and PSbindPW binding to the service servers
+
     let uri = req.uri().to_string().parse::<hyper::Uri>()?;
     let host = uri.host().expect("No host in the URL");
     let port = uri.port_u16().unwrap_or(80);

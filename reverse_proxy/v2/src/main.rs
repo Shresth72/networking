@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<ErrorType>> {
     }
 }
 
-// TODO 1: TLS connection to service servers
+// TODO 1: TLS connection to service servers using Proxy server bindings
 // TODO 2: TLS connection to multiple service servers
 // TODO 3: clientDN and clientPW binding
 // TODO 4: Load Balancer
