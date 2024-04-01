@@ -81,7 +81,20 @@ async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
         }
     }
 
-    // TODO: POST Request
+    // TODO: clientDN and clientPW binding
+    // ?: Bearer Token setup for now
+    // if res.headers().get("authorization").is_none() {
+    //     println!("No Authorization Token");
+    //     // return Err("No Authorization Token".into());
+    // }
+    // if let Some(auth) = res.headers().get("authorization") {
+    //     if PASSWORDS.contains(&auth.to_str().unwrap().split_whitespace().last().unwrap()) {
+    //         println!("Authorized");
+    //     } else {
+    //         println!("Unauthorized");
+    //         // return Err("Unauthorized".into());
+    //     }
+    // }
 
     println!("Request sent successfully");
     Ok(res)

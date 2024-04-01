@@ -13,6 +13,7 @@ fn main() {
         eprintln!("Error creating pool: {:?}", err.details);
         std::process::exit(1);
     });
+    println!("Server running on 8000");
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();

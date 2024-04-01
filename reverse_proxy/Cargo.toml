@@ -2,6 +2,7 @@
 members = [ 
     "v1", 
     "v2",
+    "cli"
 ]
 default-members = [
     "v2"

@@ -1,23 +1,26 @@
 #![allow(unused_imports)]
 
+mod connection;
+mod state;
+
 mod handler;
+use dotenv::dotenv;
 use handler::handle;
 
+use fred::prelude::*;
 use hyper::{
     body::Incoming as Body, client::conn::http1 as Client, server::conn::http1 as Server,
     service::service_fn, Request, Response,
 };
 use hyper_util::rt::TokioIo;
 use std::{
+    fmt::Debug,
     io::{self, Write},
     net::SocketAddr,
 };
 use tokio::net::{TcpListener, TcpStream};
 
 pub type ErrorType = dyn std::error::Error + Send + Sync;
-
-// Test
-const PASSWORDS: [&str; 2] = ["admin", "root"];
 
 async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     // Basic Middleware (Log Path of the incoming request)
@@ -35,11 +38,16 @@ async fn log(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<ErrorType>> {
+    dotenv().ok();
+
     // Proxy Server
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 6442));
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on: {} on v2", addr);
+
+    // Just check if the redis connection is established
+    let _cache = connection::conn().await?;
 
     // Loop to continuously accept incoming connections
     loop {
@@ -63,8 +71,6 @@ async fn main() -> Result<(), Box<ErrorType>> {
     }
 }
 
-// TODO 1: TLS connection to service servers using Proxy server bindings
-// TODO 2: TLS connection to multiple service servers
-// TODO 3: clientDN and clientPW binding
-// TODO 4: Load Balancer
-// TODO 5: Caching
+// TODO 1: Caching
+// TODO 2: CLI for processing config and send req to proxy
+// TODO 3: Load Balancer
