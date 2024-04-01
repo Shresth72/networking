@@ -54,27 +54,35 @@ impl Cache {
         todo!()
     }
 
-    pub async fn set(&self, key: &str, req: &Request<Incoming>) -> Result<(), Box<ErrorType>> {
+    pub async fn set(&self, key: &str, req: &Incoming) -> Result<(), Box<ErrorType>> {
         if !self.internal.is_connected() {
             return Err("Redis connection is not established".into());
         }
 
-        let method = req.method().to_string();
-        let uri = req.uri().to_string();
-        let version = req.version();
-        let headers = req.headers();
-        let body = req.body();
+        // let method = req.method().to_string();
+        // let uri = req.uri().to_string();
+        // let version = req.version();
+        // let headers = req.headers();
+        // let body = req.body();
 
-        let request = MyRequest {
-            method,
-            uri,
-            version,
-            headers,
-            body,
-        };
+        // let request = MyRequest {
+        //     method,
+        //     uri,
+        //     version,
+        //     headers,
+        //     body,
+        // };
 
-        let value = format!("{:?}", request);
-        self.internal.set(key, value, None, None, false).await?;
+        // let value = format!("{:?}", request);
+        // self.internal
+        //     .set(
+        //         key,
+        //         value,
+        //         Some(Expiration::EX(1)),
+        //         Some(SetOptions::XX),
+        //         false,
+        //     )
+        //     .await?;
         Ok(())
     }
 }

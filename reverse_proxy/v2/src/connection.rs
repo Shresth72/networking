@@ -8,10 +8,12 @@ use std::sync::Arc;
 pub async fn conn() -> Result<Arc<state::StateInternal>, Box<ErrorType>> {
     dotenv().ok();
 
-    let redis_url = match std::env::var("REDIS_URL")?.as_str() {
-        "" => "redis://localhost:5434".to_string(),
-        x => x.to_string(),
-    };
+    // let redis_url = match std::env::var("REDIS_URL")?.as_str() {
+    //     "" => "redis://localhost:6379".to_string(),
+    //     x => "redis://localhost:6379".to_string(),
+    // };
+
+    let redis_url = "redis://localhost:6379";
 
     let pool_size = 8;
     let config = RedisConfig::from_url(&redis_url)?;
@@ -36,7 +38,7 @@ pub async fn conn() -> Result<Arc<state::StateInternal>, Box<ErrorType>> {
 //
 //
 //
-//
+// Without pool and states
 pub async fn _connect_fred() -> Result<RedisClient, Box<dyn Error>> {
     dotenv().ok();
 
@@ -52,18 +54,6 @@ pub async fn _connect_fred() -> Result<RedisClient, Box<dyn Error>> {
     let config = RedisConfig::from_url(&redis_url)?;
     let client = Builder::from_config(config).build()?;
     let _connection_task = client.init().await?;
-
-    client
-        .set(
-            "foo",
-            "bar",
-            Some(Expiration::EX(1)),
-            Some(SetOptions::NX),
-            false,
-        )
-        .await?;
-
-    println!("Foo: {:?}", client.get::<Option<String>, _>("foo").await?);
 
     if client.is_connected() {
         println!("Connected to Redis");

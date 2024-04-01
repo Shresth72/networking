@@ -46,9 +46,6 @@ async fn main() -> Result<(), Box<ErrorType>> {
     let listener = TcpListener::bind(addr).await?;
     println!("Listening on: {} on v2", addr);
 
-    // Just check if the redis connection is established
-    let _cache = connection::conn().await?;
-
     // Loop to continuously accept incoming connections
     loop {
         let (stream, _) = listener.accept().await?;

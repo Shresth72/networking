@@ -1,5 +1,5 @@
 // #![allow(unused)]
-use crate::{connection, ErrorType};
+use crate::{connection, state::StateInternal, ErrorType};
 
 use hyper::{
     body::Incoming as Body, client::conn::http1 as Client, server::conn::http1 as Server,
@@ -9,9 +9,10 @@ use hyper_util::rt::TokioIo;
 use std::{
     io::{self, Write},
     net::SocketAddr,
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 use tokio::net::{TcpListener, TcpStream};
+use tower::ready_cache::cache;
 
 pub async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>> {
     // Client Request Sender
@@ -44,14 +45,6 @@ pub async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>
 
     let path = uri.path();
 
-    let cache = connection::conn().await?;
-    // if req.method() == hyper::Method::GET {
-    //     // Check if the request is already cached
-    //     let cache = Arc::clone(&cache);
-
-    //     println!("Cache Miss");
-    // }
-
     // Processing the request
     let req = Request::builder()
         .method(req.method())
@@ -60,16 +53,19 @@ pub async fn handle(req: Request<Body>) -> Result<Response<Body>, Box<ErrorType>
         .body(req.into_body())
         .expect("Failed to build request");
 
-    // println!("Request: {:?}", req);
-
-    // cache set
-    cache.cache.set("2", &req).await?;
-
     let res = sender.send_request(req).await?;
+
+    // Without Parallel Execution, Cache should not be used
+    // tokio::spawn(async move {
+        // let cache = connection::conn().await.unwrap();
+    
+        // cache.cache.set("key1", res.body()).await.unwrap();
+    // });
 
     println!("Response: {:?}", res.status());
     println!("Method: {:?}", method);
     println!("Host: {:?}", host);
+    println!("Response Body: {:?}", res.body());
 
     // Send the response back to the client
     Ok(res)
