@@ -42,6 +42,8 @@ fn handle_connection(mut stream: TcpStream) {
                 std::thread::sleep(std::time::Duration::from_secs(5));
                 ("HTTP/1.1 200 OK", "response.json")
             }
+            "GET /xml HTTP/1.1" => ("HTTP/1.1 200 OK", "index.xml"),
+            "GET /xml_error HTTP/1.1" => ("HTTP/1.1 200 OK", "error.xml"),
             "GET /api HTTP/1.1" => ("HTTP/1.1 200 OK", "response.json"),
             _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
         };
@@ -68,6 +70,7 @@ fn handle_file_type(filename: &str) -> &str {
     let file_type = filename.split('.').last().unwrap();
     match file_type {
         "html" => "text/html",
+        "xml" => "text/xml",
         "json" => "application/json",
         _ => "text/plain",
     }
